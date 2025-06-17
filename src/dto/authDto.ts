@@ -53,6 +53,7 @@ export interface AuthResendCodeResponseDTO {
 // REQUEST
 export interface AuthResetPasswordRequestDTO {
   email: string;
+  code: string;
   newPassword: string;
 }
 

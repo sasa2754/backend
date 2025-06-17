@@ -1,57 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { IUser } from '../interface/userInterface.ts';
 
-export interface ICompletedCourse {
-  id: number;
-  title: string;
-  image: string;
-  certificateAvailable: boolean;
-}
-
-export interface ICalendarItem {
-  date: Date;
-  type: 1 | 2 | 3; // lembrete, atividade, prova
-  description: string;
-}
-
-export type UserRole = 'employee' | 'manager' | 'admin';
-
-export interface IUser extends Document {
-  photoUser?: string;
-  name: string;
-  email: string;
-  password: string;
-  role: UserRole;
-
-  company: mongoose.Types.ObjectId;
-  manager?: mongoose.Types.ObjectId | null;
-
-  // Só employee
-  interests?: string[];
-  completedCourses?: number;
-  averageTest?: number;
-  completedCoursesList?: ICompletedCourse[];
-  ongoingCourses?: number;
-  totalCourses?: number;
-  progressPercentGeneral?: number;
-  coursesInProgress?: {
-    id: number;
-    title: string;
-    image: string;
-    progress: number;
-    description: string;
-    rating: number;
-    participants: number;
-    difficulty: 1 | 2 | 3;
-    category: string;
-  }[];
-  calendar?: ICalendarItem[];
-
-  // Só manager
-  managedEmployees?: mongoose.Types.ObjectId[];
-
-  // Só admin
-  companiesManaged?: mongoose.Types.ObjectId[];
-}
 
 const CompletedCourseSchema: Schema = new Schema({
   id: { type: Number, required: true },
@@ -71,6 +20,7 @@ const UserSchema: Schema = new Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  firstAccess: { type: Boolean, default: true },
   role: { type: String, enum: ['employee', 'manager', 'admin'], required: true },
 
   company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },

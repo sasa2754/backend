@@ -1,23 +1,47 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import initRoutes from './route/routes.js';
 import connectDB from './database/database.js';
 import cors from 'cors';
+import { seedAdminUser } from '../config/seed.ts';
 
-const app = express();
-const port = 8080;
+const startServer = async () => {
+    try {
+        await connectDB();
+        console.log('MongoDB conectado com sucesso!');
 
-connectDB();
+        const app = express();
+        const port = process.env.PORT || 8080;
 
-app.use(cors({
-    origin: '*'
-}))
+        
+        app.use(cors({
+            origin: process.env.FRONTEND_URL || 'http://localhost:3000'
+        }));
+        
+        app.use(express.json());
 
-initRoutes(app);
+        
+        app.get('/getTeste', (req, res) => {
+            res.send('GET: Requisição recebida com sucesso!');
+        });
+
+        initRoutes(app);
+
+        app.listen(port, () => console.log(`🚀 Servidor rodando: http://localhost:${port}/`));
+
+    } catch (error) {
+        console.error('❌ Falha ao iniciar o servidor:', error);
+        process.exit(1);
+    }
+};
+
+startServer();
+seedAdminUser();
 
 
-app.listen(port, () => console.log(`Acesse: http://localhost:${port}/`));
+// SECRET=aSabrinaÉLindaEMaravilhosa123senhasupersegura
 
-
-app.get('/getTeste', (req, res) => {
-    res.send('GET: Requisição recebida com sucesso!');
-});
+// ADMIN_EMAIL="admin@email.com"
+// ADMIN_PASSWORD="admin"
