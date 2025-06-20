@@ -9,14 +9,16 @@ import {
   AuthResendCodeResponseDTO,
   AuthResetPasswordRequestDTO,
   AuthResetPasswordResponseDTO,
+  SetInitialPasswordRequestDTO,
+  SetInitialPasswordResponseDTO,
 } from '../dto/authDto.ts';
 
 import User from '../model/userModel.ts'
 
 import bcrypt from 'bcrypt';
-import { generateToken } from '../utils/tokenUtil.ts';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../error/AppError.ts';
+import { sendPasswordResetEmail } from './emailService.ts';
 
 // Armazenamento em memória para os códigos de recuperação
 const passwordResetStore = new Map<string, { code: string; expiresAt: Date }>();
@@ -37,7 +39,7 @@ export class AuthService {
       throw new AppError('SECRET não definida nas variáveis de ambiente.', 500);
     }
 
-    const token = jwt.sign({ sub: user._id, email: user.email, role: user.role }, jwtSecret, { expiresIn: '8h' });
+    const token = jwt.sign({ sub: user._id, email: user.email, role: user.role, company: user.company }, jwtSecret, { expiresIn: '8h' });
 
     return {
       token,
@@ -54,9 +56,9 @@ export class AuthService {
 
       // Salvado o código do usuário
       passwordResetStore.set(user.email, { code, expiresAt });
-
-      // Lógica para enviar o e-mail (tenho que pensar em algo ainda aaaaaaaaaaaaaa)
+      
       console.log(`Código para ${user.email}: ${code}`);
+      await sendPasswordResetEmail(user.email, code);
     }
     
     return { response: true };
@@ -110,4 +112,38 @@ export class AuthService {
 
     return { response: true };
   }
+
+  public async setInitialPassword(
+        data: SetInitialPasswordRequestDTO, 
+        userId: string
+    ): Promise<SetInitialPasswordResponseDTO> {
+        
+        // 1. Buscar o usuário pelo ID e incluir a senha para comparação
+        const user = await User.findById(userId).select('+password');
+
+        if (!user) {
+            throw new AppError('Usuário não encontrado.', 404);
+        }
+
+        // 2. VERIFICAÇÃO CRUCIAL: Este endpoint só pode ser usado se for o primeiro acesso.
+        if (!user.firstAccess) {
+            throw new AppError('Esta ação não é permitida. A senha já foi definida.', 403); // 403 Forbidden
+        }
+
+        // 3. Validar se a senha atual (temporária) está correta
+        const isPasswordValid = await bcrypt.compare(data.currentPassword, user.password);
+        if (!isPasswordValid) {
+            throw new AppError('A senha atual está incorreta.', 401); // 401 Unauthorized
+        }
+
+        // 4. Criptografar a nova senha
+        const newPasswordHash = await bcrypt.hash(data.newPassword, 10);
+
+        // 5. Atualizar o documento do usuário
+        user.password = newPasswordHash;
+        user.firstAccess = false; // <-- A MÁGICA ACONTECE AQUI!
+        await user.save();
+
+        return { message: 'Senha definida com sucesso.' };
+    }
 }

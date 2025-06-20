@@ -62,3 +62,15 @@ export interface AuthResetPasswordResponseDTO {
   response: boolean;
 }
 
+
+// DTO para a requisição de mudança de senha no primeiro acesso
+export interface SetInitialPasswordRequestDTO {
+  currentPassword: string;
+  newPassword: string;
+}
+
+// DTO para a resposta
+export interface SetInitialPasswordResponseDTO {
+  message: string; // "Senha definida com sucesso."
+}
+

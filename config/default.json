@@ -1,3 +1,3 @@
 {
-    "db": "mongodb://127.0.0.1:27017/iduca"
+    "db": "mongodb+srv://sasamor5:PkLXASeO2H4w2p1z@iduca.eb31mw7.mongodb.net/iduca?retryWrites=true&w=majority&appName=Iduca"
 }

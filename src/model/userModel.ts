@@ -16,6 +16,7 @@ const CalendarItemSchema: Schema = new Schema({
 }, { _id: false });
 
 const UserSchema: Schema = new Schema({
+  employeeId: { type: String, required: true, unique: true },
   photoUser: { type: String, default: null },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },

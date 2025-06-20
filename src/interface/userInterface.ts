@@ -16,6 +16,7 @@ export interface ICalendarItem {
 export type UserRole = 'employee' | 'manager' | 'admin';
 
 export interface IUser extends Document {
+  employeeId: string;
   photoUser?: string;
   name: string;
   email: string;

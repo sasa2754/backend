@@ -22,7 +22,7 @@ export const seedAdminUser = async () => {
                 password: hashedPassword,
                 role: 'admin',
                 firstAccess: false,
-                company: null
+                company: null,
             }
         };
 

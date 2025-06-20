@@ -1,0 +1,246 @@
+===================================================
+    DOCUMENTAÇÃO DE ENDPOINTS - PROJETO IDUCA
+===================================================
+
+Este documento resume os principais fluxos de uso e todos os endpoints da api.
+
+---------------------------------
+ FLUXOS DE USO COMUNS
+---------------------------------
+
+Estes são exemplos de como os endpoints são usados em sequência para realizar tarefas completas no sistema.
+
+---
+FLUXO 1: Admin cadastra uma nova Empresa e seu primeiro Gestor
+---
+1.  **ADMIN FAZ LOGIN:**
+    - Faz uma chamada `POST /auth/login` com as credenciais de admin (`admin@email.com`, `admin`).
+    - Pega o `token` da resposta. Este é o TOKEN_ADMIN.
+
+2.  **ADMIN CRIA UMA EMPRESA:**
+    - Faz uma chamada `POST /admin/companies`.
+    - Nos Headers, adiciona: `Authorization: Bearer <TOKEN_ADMIN>`.
+    - No Body, envia o nome da empresa: `{"name": "Nova Empresa XYZ"}`.
+    - Pega o `id` da empresa da resposta. Este é o COMPANY_ID.
+
+3.  **ADMIN CRIA UM USUÁRIO (GESTOR) PARA ESSA EMPRESA:**
+    - Faz uma chamada `POST /users`.
+    - Nos Headers, usa o mesmo `Authorization: Bearer <TOKEN_ADMIN>`.
+    - No Body, envia os dados do novo gestor, especificando o `companyId`:
+      `{"employeeId": "101", "name": "Primeiro Gestor", "email": "gestor@xyz.com", "isManager": true, "companyId": "ID_DA_EMPRESA_CRIADA"}`
+    - O gestor receberá um e-mail com sua senha temporária.
+
+---
+FLUXO 2: Novo Gestor faz o primeiro login e cadastra um funcionário
+---
+1.  **GESTOR FAZ LOGIN COM SENHA TEMPORÁRIA:**
+    - Faz uma chamada `POST /auth/login` com o e-mail (`gestor@xyz.com`) e a senha temporária recebida.
+    - Pega o `token` da resposta. Este é o TOKEN_PRIMEIRO_ACESSO.
+
+2.  **GESTOR DEFINE SUA SENHA DEFINITIVA:**
+    - Faz uma chamada `POST /auth/set-initial-password`.
+    - Nos Headers, adiciona: `Authorization: Bearer <TOKEN_PRIMEIRO_ACESSO>`.
+    - No Body, envia a senha temporária e a nova senha:
+      `{"currentPassword": "senha_temporaria_do_email", "newPassword": "senha_forte_123"}`.
+
+3.  **GESTOR FAZ LOGIN NOVAMENTE (COM SENHA NOVA):**
+    - Faz uma chamada `POST /auth/login` com `gestor@xyz.com` e `senha_forte_123`.
+    - Pega o `token` da resposta. Este é o TOKEN_GESTOR_NORMAL.
+
+4.  **GESTOR CRIA UM FUNCIONÁRIO:**
+    - Faz uma chamada `POST /users`.
+    - Nos Headers, usa o `Authorization: Bearer <TOKEN_GESTOR_NORMAL>`.
+    * No Body, envia os dados do funcionário. Note que ele **NÃO** precisa enviar o `companyId`.
+      `{"employeeId": "102", "name": "Primeiro Funcionario", "email": "func@xyz.com", "isManager": false}`
+    - O funcionário é criado automaticamente na mesma empresa do gestor.
+
+===================================================
+    REFERÊNCIA COMPLETA DE ENDPOINTS
+===================================================
+
+---------------------------------
+ AUTH - Autenticação (/auth)
+---------------------------------
+
+Endpoint: POST /auth/login
+Descrição: Realiza o login de qualquer tipo de usuário.
+Autorização: Nenhuma.
+Corpo (Request Body):
+{
+  "email": "usuario@empresa.com",
+  "password": "senha"
+}
+Resposta de Sucesso (200 OK):
+{
+  "token": "eyJ...",
+  "firstAccess": true
+}
+
+---
+
+Endpoint: POST /auth/set-initial-password
+Descrição: Usado por um usuário logado para definir sua senha definitiva após o primeiro acesso.
+Autorização: Bearer Token de um usuário com `firstAccess: true`.
+Corpo (Request Body):
+{
+  "currentPassword": "senha_temporaria_recebida_por_email",
+  "newPassword": "nova_senha_definitiva"
+}
+Resposta de Sucesso (200 OK):
+{
+  "message": "Senha definida com sucesso."
+}
+Respostas de Erro Comuns:
+- 401 Unauthorized: Se a `currentPassword` estiver errada.
+- 403 Forbidden: Se o usuário não estiver mais em modo `firstAccess`.
+
+---
+
+Endpoint: POST /auth/forgotPass
+Descrição: Inicia o fluxo de recuperação de senha, enviando um código para o e-mail do usuário.
+Autorização: Nenhuma.
+Corpo (Request Body):
+{
+  "email": "usuario@empresa.com"
+}
+Resposta de Sucesso (200 OK):
+{
+  "response": true
+}
+
+---
+
+Endpoint: POST /auth/checkCode
+Descrição: Verifica se o código de 5 dígitos enviado para o e-mail está correto.
+Autorização: Nenhuma.
+Corpo (Request Body):
+{
+  "email": "usuario@empresa.com",
+  "code": "12345"
+}
+Resposta de Sucesso (200 OK):
+{
+  "response": true
+}
+
+---
+
+Endpoint: POST /auth/resendCode
+Descrição: Reenvia um novo código de recuperação de senha.
+Autorização: Nenhuma.
+Corpo (Request Body):
+{
+  "email": "usuario@empresa.com"
+}
+Resposta de Sucesso (200 OK):
+{
+  "response": true
+}
+
+---
+
+Endpoint: POST /auth/resetPassword
+Descrição: Define uma nova senha após a validação do código.
+Autorização: Nenhuma.
+Corpo (Request Body):
+{
+  "email": "usuario@empresa.com",
+  "code": "12345",
+  "newPassword": "nova_senha_esquecida"
+}
+Resposta de Sucesso (200 OK):
+{
+  "response": true
+}
+
+----------------------------------------
+ ADMIN - Empresas (/admin/companies)
+----------------------------------------
+
+Endpoint: POST /admin/companies
+Descrição: Cria uma nova empresa cliente no sistema.
+Autorização: Bearer Token de um usuário com `role: "admin"`.
+Corpo (Request Body):
+{
+  "name": "Nome da Nova Empresa"
+}
+Resposta de Sucesso (201 Created):
+{
+  "message": "Company created successfully",
+  "companyId": "6674c1a2b3d4e5f6g7h8i9j0"
+}
+Respostas de Erro Comuns:
+- 409 Conflict: Se uma empresa com esse nome já existe.
+- 403 Forbidden: Se o usuário não for admin.
+
+---
+
+Endpoint: GET /admin/companies
+Descrição: Lista todas as empresas cadastradas.
+Autorização: Bearer Token de um usuário com `role: "admin"`.
+Corpo: Nenhum.
+Resposta de Sucesso (200 OK):
+{
+  "companies": [
+    {
+      "id": "6674c1a2b3d4e5f6g7h8i9j0",
+      "name": "Nome da Nova Empresa"
+    },
+    {
+      "id": "6674c1b3c4d5e6f7g8h9i0j1",
+      "name": "Outra Empresa"
+    }
+  ]
+}
+
+---
+
+Endpoint: DELETE /admin/companies/:companyId
+Descrição: Deleta uma empresa e TODOS os funcionários associados a ela.
+Autorização: Bearer Token de um usuário com `role: "admin"`.
+Corpo: Nenhum.
+URL Exemplo: `http://localhost:8080/admin/companies/6674c1a2b3d4e5f6g7h8i9j0`
+Resposta de Sucesso (200 OK):
+{
+  "message": "Company and related employees deleted successfully"
+}
+Respostas de Erro Comuns:
+- 404 Not Found: Se o companyId não existir.
+
+-------------------------------
+ USERS - Usuários (/users)
+-------------------------------
+
+Endpoint: POST /users
+Descrição: Cria um novo usuário (manager ou employee). O comportamento muda baseado em quem faz a chamada.
+Autorização: Bearer Token de um usuário com `role: "admin"` ou `role: "manager"`.
+
+Cenário 1: Admin criando um usuário (obrigatoriamente um manager)
+Corpo (Request Body):
+{
+  "employeeId": "1001",
+  "name": "Novo Gestor",
+  "email": "gestor@empresa.com",
+  "isManager": true, // Este campo é ignorado, será sempre manager
+  "companyId": "ID_DA_EMPRESA_ALVO" // Obrigatório para o admin
+}
+
+Cenário 2: Manager criando um usuário
+Corpo (Request Body):
+{
+  "employeeId": "1002",
+  "name": "Novo Funcionário",
+  "email": "func@empresa.com",
+  "isManager": false // Manager decide se o novo user é manager ou não
+}
+
+Resposta de Sucesso (201 Created):
+{
+  "success": true,
+  "message": "Usuário criado com sucesso. Um e-mail com a senha temporária foi enviado."
+}
+Respostas de Erro Comuns:
+- 409 Conflict: Se o email ou employeeId já existem.
+- 400 Bad Request: Se um admin não especificar o companyId.
+- 403 Forbidden: Se um funcionário tentar criar outro usuário.
+- 404 Not Found: Se o admin especificar um companyId que não existe.
