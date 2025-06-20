@@ -34,7 +34,25 @@ const UserSchema: Schema = new Schema({
   ongoingCourses: { type: Number, default: 0 },
   totalCourses: { type: Number, default: 0 },
   progressPercentGeneral: { type: Number, default: 0 },
-  coursesInProgress: { type: Array, default: [] },
+  coursesInProgress: [{
+      _id: false,
+      // ID do curso que está em progresso
+      courseId: { 
+          type: mongoose.Schema.Types.ObjectId, 
+          ref: 'Course',
+          required: true 
+      },
+      // Progresso geral do usuário no curso (ex: 20%)
+      progress: { 
+          type: Number, 
+          default: 0 
+      },
+      // Array para guardar os IDs de cada aula/atividade completada
+      completedContent: [{
+          _id: false,
+          contentId: { type: mongoose.Schema.Types.ObjectId }
+      }]
+  }],
   calendar: { type: [CalendarItemSchema], default: [] },
 
   managedEmployees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

@@ -3,22 +3,17 @@ import { authMiddleware, checkRole } from '../middleware/authMiddleware.ts';
 import { CourseService } from '../service/courseService.ts';
 import { CourseController } from '../controller/courseController.ts';
 
-const courseRouter = Router();
+const adminCourseRouter = Router();
 
 const courseService = new CourseService();
 const courseController = new CourseController(courseService);
 
 const adminOnly = [authMiddleware, checkRole(['admin'])];
 
+adminCourseRouter.post('/', adminOnly, courseController.createCourse);
 
-courseRouter.route('/')
-    .post(adminOnly, courseController.createCourse);
-    // .get(...) futuramente
+adminCourseRouter.post('/:courseId/exam', adminOnly, courseController.createExam);
 
-courseRouter.route('/:courseId/exam')
-    .post(adminOnly, courseController.createExam);
+adminCourseRouter.delete('/:courseId', adminOnly, courseController.deleteCourse);
 
-courseRouter.route('/:courseId')
-    .delete(adminOnly, courseController.deleteCourse);
-
-export default courseRouter;
+export default adminCourseRouter;

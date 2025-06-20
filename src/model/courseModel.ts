@@ -6,21 +6,21 @@ import { ICourse } from '../interface/courseInterface.ts';
 const OptionSchema: Schema = new Schema({
     id: { type: String, required: true },
     text: { type: String, required: true }
-}, { _id: false });
+});
 
 // Schema para uma questão (usado em atividades e provas)
 const QuestionSchema: Schema = new Schema({
     id: { type: Number, required: true },
     question: { type: String, required: true },
     options: { type: [OptionSchema], required: true }
-}, { _id: false });
+});
 
 // Schema para os blocos de uma aula escrita (texto ou imagem)
 const WrittenContentBlockSchema: Schema = new Schema({
     type: { type: Number, required: true, enum: [1, 2] }, // 1 = texto, 2 = imagem
     title: { type: String }, // Título opcional para blocos de texto
     value: { type: String, required: true } // O texto ou a URL da imagem
-}, { _id: false });
+});
 
 
 // --- SCHEMAS PRINCIPAIS ---
@@ -39,7 +39,7 @@ const ModuleContentSchema: Schema = new Schema({
 
     // Campo para o tipo 4 (Atividade PDF)
     description: { type: String, required: false }
-}, { _id: false });
+});
 
 
 // Schema para um Módulo
@@ -47,7 +47,7 @@ const ModuleSchema: Schema = new Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
     content: [ModuleContentSchema]
-}, { _id: false });
+});
 
 
 // Schema Principal e Final do Curso

@@ -2,6 +2,14 @@ import { Request, Response } from 'express';
 import { CourseService } from '../service/courseService.ts';
 import { AppError } from '../error/AppError.ts';
 
+interface AuthRequest extends Request {
+    user?: {
+        sub: string;
+        role: 'admin' | 'manager' | 'employee';
+        company?: string | null;
+    };
+}
+
 export class CourseController {
     constructor(private courseService: CourseService) {}
 
@@ -47,5 +55,45 @@ export class CourseController {
         }
     };
 
-    // Futuramente, você adicionaria aqui o método listCourses, getCourseById, etc.
+    public listAll = async (req: AuthRequest, res: Response) => {
+        try {
+            const userId = req.user?.sub;
+            if (!userId) {
+                throw new AppError('Usuário não autenticado.', 401);
+            }
+            
+            const filters = {
+                page: req.query.page ? Number(req.query.page) : undefined,
+                search: req.query.search as string | undefined,
+                category: req.query.category as string | undefined,
+                difficulty: req.query.difficulty ? Number(req.query.difficulty) : undefined,
+            };
+
+            const result = await this.courseService.findAll(userId, filters);
+            res.status(200).json(result);
+        } catch (error) {
+            if (error instanceof AppError) {
+                res.json({ message: error.message });
+            }
+            console.error("ERRO AO LISTAR CURSOS:", error);
+            res.status(500).json({ message: 'Erro interno ao listar cursos.' });
+        }
+    };
+
+    public getCourseDetailsById = async (req: AuthRequest, res: Response) => {
+        try {
+            const userId = req.user?.sub;
+            if (!userId) {
+                throw new AppError('Usuário não autenticado.', 401);
+            }
+
+            const { id } = req.params;
+
+            const result = await this.courseService.findCourseDetailsById(id, userId);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("ERRO AO PEGAR OS DETALHES DO CURSO:", error);
+            throw new AppError("Erro interno do servidor!", 500);
+        }
+    };
 }

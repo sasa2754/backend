@@ -1,20 +1,22 @@
 import mongoose, { Document } from "mongoose";
 
-// Interface para as opções de uma questão
+// --- INTERFACES PARA OS SUB-DOCUMENTOS ---
+
 export interface IOption {
     id: string;
     text: string;
+    // Mongoose sub-docs não têm _id se o schema for { _id: false }, então não colocamos aqui.
 }
 
-// Interface para uma questão de múltipla escolha
 export interface IQuestion {
+    _id: mongoose.Types.ObjectId; // <-- ADICIONADO
     id: number;
     question: string;
     options: IOption[];
 }
 
-// Interface para um bloco de conteúdo de uma aula escrita (texto ou imagem)
 export interface IWrittenContentBlock {
+    _id: mongoose.Types.ObjectId; // <-- ADICIONADO
     type: 1 | 2;
     title?: string;
     value: string;
@@ -23,15 +25,16 @@ export interface IWrittenContentBlock {
 // --- INTERFACES MODULARES ---
 
 export interface IModuleContent {
+    _id: mongoose.Types.ObjectId; // <-- ADICIONADO
     type: 1 | 2 | 3 | 4;
     title: string;
-    content?: IWrittenContentBlock[]; // Para tipo 1 (aula escrita)
-    questions?: IQuestion[];          // Para tipo 3 (múltipla escolha)
-    description?: string;             // Para tipo 4 (atividade PDF)
+    content?: IWrittenContentBlock[];
+    questions?: IQuestion[];
+    description?: string;
 }
 
-// Interface para um Módulo
 export interface IModule {
+    _id: mongoose.Types.ObjectId; // <-- ADICIONADO
     title: string;
     description: string;
     content: IModuleContent[];
@@ -40,6 +43,8 @@ export interface IModule {
 // --- INTERFACE PRINCIPAL E FINAL DO CURSO ---
 
 export interface ICourse extends Document {
+    // _id já é herdado de Document, mas podemos ser explícitos se quisermos.
+    // _id: mongoose.Types.ObjectId; 
     isActive: boolean;
     title: string;
     image: string;

@@ -1,7 +1,7 @@
 import mongoose, { Document } from 'mongoose';
 
 export interface ICompletedCourse {
-  id: number;
+  id: string;
   title: string;
   image: string;
   certificateAvailable: boolean;
@@ -15,6 +15,16 @@ export interface ICalendarItem {
 
 export type UserRole = 'employee' | 'manager' | 'admin';
 
+export interface ICompletedContent {
+  contentId: mongoose.Types.ObjectId;
+}
+
+export interface ICourseInProgress {
+  courseId: string;
+  progress: number;
+  completedContent: ICompletedContent[];
+}
+
 export interface IUser extends Document {
   employeeId: string;
   photoUser?: string;
@@ -24,10 +34,10 @@ export interface IUser extends Document {
   firstAccess: boolean;
   role: UserRole;
 
-  company: mongoose.Types.ObjectId;
+
+  company?: mongoose.Types.ObjectId | null; 
   manager?: mongoose.Types.ObjectId | null;
 
-  // Só employee
   interests?: string[];
   completedCourses?: number;
   averageTest?: number;
@@ -35,22 +45,14 @@ export interface IUser extends Document {
   ongoingCourses?: number;
   totalCourses?: number;
   progressPercentGeneral?: number;
-  coursesInProgress?: {
-    id: number;
-    title: string;
-    image: string;
-    progress: number;
-    description: string;
-    rating: number;
-    participants: number;
-    difficulty: 1 | 2 | 3;
-    category: string;
-  }[];
+  
+  coursesInProgress?: ICourseInProgress[];
+  
   calendar?: ICalendarItem[];
 
-  // Só manager
+  // Seção do "manager"
   managedEmployees?: mongoose.Types.ObjectId[];
 
-  // Só admin
+  // Seção do "admin"
   companiesManaged?: mongoose.Types.ObjectId[];
 }
