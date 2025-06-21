@@ -9,7 +9,8 @@ export class UserService {
     public async createUser(
         data: CreateUserRequestDTO, 
         creatorRole: 'admin' | 'manager',
-        creatorCompanyId?: string | null
+        creatorCompanyId?: string | null,
+        creatorId?: string
     ): Promise<{ success: boolean; message: string }> {
 
         const existingUser = await User.findOne({ 
@@ -43,7 +44,7 @@ export class UserService {
             role = data.isManager ? 'manager' : 'employee';
         }
         
-        const newUser = {
+        const newUser : any = {
             employeeId: data.employeeId,
             name: data.name,
             email: data.email,
@@ -52,6 +53,10 @@ export class UserService {
             firstAccess: true,
             company: targetCompanyId,
         };
+
+        if (creatorRole === 'manager') {
+            newUser.manager = creatorId;
+        }
 
         await User.create(newUser);
 

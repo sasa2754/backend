@@ -33,4 +33,38 @@ export class ManagerController {
             res.status(500).json({ message: 'Erro interno no servidor.' });
         }
     };
+
+    public getDashboard = async (req: AuthRequest, res: Response) => {
+        try {
+            const managerId = req.user?.sub;
+            if (!managerId) {
+                throw new AppError('Manager não autenticado.', 401);
+            }
+            const result = await this.managerService.getDashboardData(managerId);
+            res.status(200).json(result);
+        } catch (error) {
+            if (error instanceof AppError) {
+                res.json({ message: error.message });
+            }
+            console.error("ERRO AO PEGAR O PROGRESSO DOS FUNCIONÁRIOS:", error);
+            res.status(500).json({ message: 'Erro interno no servidor.' });
+        }
+    };
+
+    public getEmployeesSummary = async (req: AuthRequest, res: Response) => {
+        try {
+            const managerId = req.user?.sub;
+            if (!managerId) {
+                throw new AppError('Manager não autenticado.', 401);
+            }
+            const result = await this.managerService.getEmployeesSummary(managerId);
+            res.status(200).json(result);
+        } catch (error) {
+            if (error instanceof AppError) {
+                res.json({ message: error.message });
+            }
+            console.error("ERRO AO PEGAR O PROGRESSO DOS FUNCIONÁRIOS:", error);
+            res.status(500).json({ message: 'Erro interno no servidor.' });
+        }
+    };
 }

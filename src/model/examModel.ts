@@ -10,6 +10,7 @@ const QuestionSchema: Schema = new Schema({
   id: { type: Number, required: true },
   question: { type: String, required: true },
   options: { type: [OptionSchema], required: true },
+  correctOptionId: { type: String, required: true } 
 }, { _id: false });
 
 const ExamSchema: Schema = new Schema({

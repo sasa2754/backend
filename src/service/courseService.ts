@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import Course from '../model/courseModel.ts';
 import Exam from '../model/examModel.ts';
 import { AppError } from '../error/AppError.ts';
-import { CreateCourseRequestDTO, CreateExamRequestDTO } from '../dto/courseDto.ts';
+import { CreateCourseRequestDTO, CreateExamRequestDTO, SubmitQuizRequestDTO, SubmitQuizResponseDTO } from '../dto/courseDto.ts';
 import { ICourse } from '../interface/courseInterface.ts';
 import userModel from '../model/userModel.ts';
 
@@ -167,5 +167,172 @@ export class CourseService {
         };
 
         return response;
+    }
+
+    public async findLessonById(courseId: string, lessonId: string, userId: string): Promise<any> {
+        if (!mongoose.Types.ObjectId.isValid(courseId) || !mongoose.Types.ObjectId.isValid(lessonId)) {
+            throw new AppError('ID de curso ou aula inválido.', 400);
+        }
+        
+        const coursePromise = Course.findById(courseId).lean();
+        const userPromise = userModel.findById(userId).select('coursesInProgress').lean();
+        const [course, user] = await Promise.all([coursePromise, userPromise]);
+
+        if (!course) {
+            throw new AppError('Curso não encontrado.', 404);
+        }
+
+        let targetLesson: any = null;
+        let parentModule: any = null;
+        let moduleIndex = -1;
+        let lessonIndex = -1;
+
+        for (let i = 0; i < course.modules.length; i++) {
+            const module = course.modules[i];
+            const foundIndex = module.content.findIndex((c: any) => c._id.toString() === lessonId);
+            
+            if (foundIndex !== -1) {
+                targetLesson = module.content[foundIndex];
+                parentModule = module;
+                moduleIndex = i;
+                lessonIndex = foundIndex;
+                break;
+            }
+        }
+
+        if (!targetLesson) {
+            throw new AppError('Aula ou atividade não encontrada neste curso.', 404);
+        }
+
+        let nextLesson: any = false;
+        if (lessonIndex + 1 < parentModule.content.length) {
+            const nextContent = parentModule.content[lessonIndex + 1];
+            nextLesson = { id: nextContent._id.toString(), type: nextContent.type, title: nextContent.title };
+        } 
+        else if (moduleIndex + 1 < course.modules.length) {
+            const nextModule = course.modules[moduleIndex + 1];
+            if (nextModule.content && nextModule.content.length > 0) {
+                const nextContent = nextModule.content[0];
+                nextLesson = { id: nextContent._id.toString(), type: nextContent.type, title: nextContent.title };
+            }
+        }
+        
+        const userCourseProgress = user?.coursesInProgress?.find(
+            (p: any) => p.courseId.toString() === courseId
+        );
+        const completedContentSet = new Set(
+            userCourseProgress?.completedContent?.map((c: any) => c.contentId.toString()) || []
+        );
+
+        const response = {
+            ...targetLesson,
+            id: targetLesson._id.toString(),
+            courseId: course._id.toString(),
+            completed: completedContentSet.has(targetLesson._id.toString()),
+            nextLesson: nextLesson
+        };
+        
+        delete response._id;
+
+        return response;
+    }
+
+    public async markLessonAsComplete(userId: string, courseId: string, lessonId: string) {
+        const course = await Course.findById(courseId).lean();
+        const user = await userModel.findById(userId);
+
+        if (!user) throw new AppError('Usuário não encontrado.', 404);
+        if (!course) throw new AppError('Curso não encontrado.', 404);
+
+        const courseProgress = user.coursesInProgress?.find(p => p.courseId.toString() === courseId);
+
+        if (!courseProgress) {
+            throw new AppError('Usuário não está inscrito neste curso.', 403);
+        }
+
+        const isAlreadyCompleted = courseProgress.completedContent.some(
+            c => c.contentId.toString() === lessonId
+        );
+
+        if (isAlreadyCompleted) {
+            return { message: "Aula já estava marcada como concluída.", newProgress: courseProgress.progress };
+        }
+
+        courseProgress.completedContent.push({ contentId: new mongoose.Types.ObjectId(lessonId) });
+
+        const totalContentItems = course.modules.reduce((sum, module) => sum + module.content.length, 0);
+        const completedCount = courseProgress.completedContent.length;
+
+        if (totalContentItems > 0) {
+            courseProgress.progress = Math.round((completedCount / totalContentItems) * 100);
+        }
+
+        await user.save();
+
+        return { 
+            message: "Aula marcada como concluída com sucesso!", 
+            newProgress: courseProgress.progress 
+        };
+    }
+
+    public async submitQuiz(
+        userId: string, 
+        courseId: string, 
+        lessonId: string, 
+        submission: SubmitQuizRequestDTO
+    ): Promise<SubmitQuizResponseDTO> {
+        
+        const user = await userModel.findById(userId);
+        if (!user) throw new AppError('Usuário não encontrado.', 404);
+
+        const courseProgress = user.coursesInProgress?.find(p => p.courseId.toString() === courseId);
+        if (!courseProgress) throw new AppError('Usuário não está inscrito neste curso.', 403);
+        
+        const isAlreadyCompleted = courseProgress.completedContent.some(c => c.contentId.toString() === lessonId);
+        if (isAlreadyCompleted) throw new AppError('Esta atividade já foi concluída.', 409);
+
+        const course = await Course.findOne({ "modules.content._id": lessonId }).lean();
+        if (!course) throw new AppError('Atividade não encontrada.', 404);
+
+        let quizActivity: any;
+        course.modules.forEach(m => {
+            const found = m.content.find((c: any) => c._id.toString() === lessonId);
+            if (found) quizActivity = found;
+        });
+
+        if (!quizActivity || quizActivity.type !== 3) {
+            throw new AppError('O conteúdo encontrado não é uma atividade de múltipla escolha.', 400);
+        }
+
+        let correctCount = 0;
+        const totalQuestions = quizActivity.questions.length;
+
+        const correctAnswersMap = new Map(quizActivity.questions.map((q: any) => [q.id, q.correctOptionId]));
+
+        submission.answers.forEach(answer => {
+            if (correctAnswersMap.get(answer.questionId) === answer.selectedOptionId) {
+                correctCount++;
+            }
+        });
+
+        const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+
+        courseProgress.completedContent.push({ 
+            contentId: new mongoose.Types.ObjectId(lessonId),
+            score: score
+        });
+
+        const totalContentItems = course.modules.reduce((sum, module) => sum + module.content.length, 0);
+        courseProgress.progress = Math.round((courseProgress.completedContent.length / totalContentItems) * 100);
+        
+        await user.save();
+
+        return {
+            message: "Atividade enviada com sucesso!",
+            score: score,
+            correctAnswers: correctCount,
+            totalQuestions: totalQuestions,
+            newProgress: courseProgress.progress
+        };
     }
 }

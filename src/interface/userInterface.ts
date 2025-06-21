@@ -17,6 +17,8 @@ export type UserRole = 'employee' | 'manager' | 'admin';
 
 export interface ICompletedContent {
   contentId: mongoose.Types.ObjectId;
+  score?: number;
+  submissionPath?: any;
 }
 
 export interface ICourseInProgress {

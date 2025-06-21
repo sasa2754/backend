@@ -201,15 +201,19 @@ export interface LessonPDFResponseDTO {
 // Para enviar as respostas do aluno nas atividades de múltipla escolha no POST /activities/:id/submitQuiz
 // REQUEST
 export interface SubmitQuizRequestDTO {
-  answers: {
-    questionId: number;
-    selectedOptionId: string;
-  }[];
+  answers: Array<{
+    questionId: number; // O ID da pergunta (ex: 1, 2, 3)
+    selectedOptionId: string; // O ID da opção escolhida (ex: "a", "b")
+  }>;
 }
 
-// RESPONSE
+// RESPONSE: O que o backend retorna
 export interface SubmitQuizResponseDTO {
-  response: boolean;
+  message: string;
+  score: number; // A nota que o usuário tirou (0 a 100)
+  correctAnswers: number;
+  totalQuestions: number;
+  newProgress: number; // O novo progresso geral do curso
 }
 
 

@@ -50,7 +50,8 @@ const UserSchema: Schema = new Schema({
       // Array para guardar os IDs de cada aula/atividade completada
       completedContent: [{
           _id: false,
-          contentId: { type: mongoose.Schema.Types.ObjectId }
+          contentId: { type: mongoose.Schema.Types.ObjectId },
+          score: { type: Number, required: false }
       }]
   }],
   calendar: { type: [CalendarItemSchema], default: [] },

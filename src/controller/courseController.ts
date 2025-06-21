@@ -96,4 +96,53 @@ export class CourseController {
             throw new AppError("Erro interno do servidor!", 500);
         }
     };
+
+    public getLessonById = async (req: AuthRequest, res: Response) => {
+        try {
+            const userId = req.user?.sub;
+            if (!userId) {
+                throw new AppError('Usuário não autenticado.', 401);
+            }
+
+            const { courseId, lessonId } = req.params; 
+
+            const result = await this.courseService.findLessonById(courseId, lessonId, userId);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("ERRO AO PEGAR AS LIÇÕES DO CURSO:", error);
+            throw new AppError("Erro interno do servidor!", 500);
+        }
+    };
+
+    public markLessonAsComplete = async (req: AuthRequest, res: Response) => {
+        try {
+            const userId = req.user?.sub;
+            if (!userId) {
+                throw new AppError('Usuário não autenticado.', 401);
+            }
+
+            const { courseId, lessonId } = req.params;
+
+            const result = await this.courseService.markLessonAsComplete(userId, courseId, lessonId);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("ERRO AO MARCAR A LIÇÃO COMO CONCLUÍDA:", error);
+            throw new AppError("Erro interno do servidor!", 500);
+        }
+    };
+
+    public submitQuiz = async (req: AuthRequest, res: Response) => {
+        try {
+            const userId = req.user?.sub;
+            if (!userId) throw new AppError('Usuário não autenticado.', 401);
+
+            const { courseId, lessonId } = req.params;
+
+            const result = await this.courseService.submitQuiz(userId, courseId, lessonId, req.body);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("ERRO AO ENVIAR A ATIVIDADE:", error);
+            throw new AppError("Erro interno do servidor!", 500);
+        }
+    };
 }

@@ -13,6 +13,7 @@ export interface IQuestion {
     id: number;
     question: string;
     options: IOption[];
+    correctOptionId: string;
 }
 
 export interface IWrittenContentBlock {

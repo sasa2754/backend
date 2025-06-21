@@ -21,8 +21,9 @@ export class UserController {
 
             const creatorRole = req.user.role as 'admin' | 'manager';
             const companyId = req.user.company;
+            const creatorId = req.user.sub;
 
-            const result = await this.userService.createUser(req.body, creatorRole, companyId);
+            const result = await this.userService.createUser(req.body, creatorRole, companyId, creatorId);
             
             res.status(201).json(result);
 

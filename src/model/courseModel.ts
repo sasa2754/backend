@@ -12,7 +12,8 @@ const OptionSchema: Schema = new Schema({
 const QuestionSchema: Schema = new Schema({
     id: { type: Number, required: true },
     question: { type: String, required: true },
-    options: { type: [OptionSchema], required: true }
+    options: { type: [OptionSchema], required: true },
+    correctOptionId: { type: String, required: true } 
 });
 
 // Schema para os blocos de uma aula escrita (texto ou imagem)

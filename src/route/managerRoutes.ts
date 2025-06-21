@@ -13,5 +13,10 @@ const managerOnly = [authMiddleware, checkRole(['manager'])];
 // Rota para inscrever um funcionário
 managerRouter.post('/enroll', managerOnly, managerController.enrollEmployee);
 
+// Rota para o dashboard do manager
+managerRouter.get('/dashboard', managerOnly, managerController.getDashboard);
+
+// Rota para o sumário da equipe
+managerRouter.get('/employeesSummary', managerOnly, managerController.getEmployeesSummary);
 
 export default managerRouter;

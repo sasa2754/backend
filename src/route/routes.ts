@@ -8,6 +8,8 @@ import courseRouter from "./adminCourseRoutes.ts";
 import generalCourseRouter from "./generalCourseRoutes.ts";
 import managerRouter from "./managerRoutes.ts";
 import notificationRouter from "./notificationRoutes.ts";
+import homeRouter from "./homeRoutes.ts";
+import activityRouter from "./activityRoutes.ts";
 
 export default function (app: Express) {
     app.use(express.json());
@@ -19,6 +21,8 @@ export default function (app: Express) {
     app.use("/courses", generalCourseRouter);
     app.use("/manager", managerRouter);
     app.use("/notification", notificationRouter);
+    app.use("/home", homeRouter);
+    app.use("/activities", activityRouter);
 
     app.use(async (err: Error, req: Request, res: Response, next: NextFunction) => {
         let status = 500;
