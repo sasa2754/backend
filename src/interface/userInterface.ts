@@ -1,9 +1,11 @@
 import mongoose, { Document } from 'mongoose';
 
 export interface ICompletedCourse {
+  courseId: mongoose.Types.ObjectId;
   id: string;
   title: string;
   image: string;
+  completionDate: Date;
   certificateAvailable: boolean;
 }
 

@@ -30,7 +30,12 @@ const UserSchema: Schema = new Schema({
   interests: { type: [String], default: [], validate: [(val: string[]) => val.length <= 5, 'Máximo 5 interesses'] },
   completedCourses: { type: Number, default: 0 },
   averageTest: { type: Number, default: 0 },
-  completedCoursesList: { type: [CompletedCourseSchema], default: [] },
+  completedCoursesList: [{
+      _id: false,
+      courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+      completionDate: { type: Date, default: Date.now },
+      certificateAvailable: { type: Boolean, default: true }
+  }],
   ongoingCourses: { type: Number, default: 0 },
   totalCourses: { type: Number, default: 0 },
   progressPercentGeneral: { type: Number, default: 0 },

@@ -145,4 +145,20 @@ export class CourseController {
             throw new AppError("Erro interno do servidor!", 500);
         }
     };
+
+    public getExam = async (req: AuthRequest, res: Response) => {
+        try {
+            const userId = req.user?.sub;
+            if (!userId) {
+                throw new AppError('Usuário não autenticado.', 401);
+            }
+            const { id: courseId } = req.params;
+
+            const result = await this.courseService.getExamForCourse(userId, courseId);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("ERRO AO ENVIAR A PROVA:", error);
+            throw new AppError("Erro interno do servidor!", 500);
+        }
+    };
 }

@@ -9,7 +9,7 @@ export interface IOption {
 }
 
 export interface IQuestion {
-    _id: mongoose.Types.ObjectId; // <-- ADICIONADO
+    _id: mongoose.Types.ObjectId;
     id: number;
     question: string;
     options: IOption[];
@@ -17,7 +17,7 @@ export interface IQuestion {
 }
 
 export interface IWrittenContentBlock {
-    _id: mongoose.Types.ObjectId; // <-- ADICIONADO
+    _id: mongoose.Types.ObjectId;
     type: 1 | 2;
     title?: string;
     value: string;
@@ -26,16 +26,17 @@ export interface IWrittenContentBlock {
 // --- INTERFACES MODULARES ---
 
 export interface IModuleContent {
-    _id: mongoose.Types.ObjectId; // <-- ADICIONADO
+    _id: mongoose.Types.ObjectId;
     type: 1 | 2 | 3 | 4;
     title: string;
     content?: IWrittenContentBlock[];
+    deadline?: Date;
     questions?: IQuestion[];
     description?: string;
 }
 
 export interface IModule {
-    _id: mongoose.Types.ObjectId; // <-- ADICIONADO
+    _id: mongoose.Types.ObjectId;
     title: string;
     description: string;
     content: IModuleContent[];

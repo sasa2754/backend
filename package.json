@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
+    "@types/puppeteer": "^5.4.7",
     "bcrypt": "^6.0.0",
     "config": "^3.3.12",
     "cors": "^2.8.5",
@@ -39,6 +40,7 @@
     "mongoose": "^8.16.0",
     "multer": "^2.0.1",
     "nodemailer": "^7.0.3",
+    "puppeteer": "^24.10.2",
     "ws": "^8.18.1"
   }
 }

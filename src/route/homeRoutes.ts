@@ -10,6 +10,7 @@ const homeController = new HomeController(homeService);
 
 homeRouter.get('/progress', authMiddleware, homeController.getProgress);
 
-// Futuramente, as rotas /home/coursesInProgress e /home/calendar virão aqui
+homeRouter.get('/coursesInProgress', authMiddleware, homeController.getCoursesInProgress);
+
 
 export default homeRouter;

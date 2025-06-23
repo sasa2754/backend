@@ -39,4 +39,33 @@ export class HomeService {
 
         return response;
     }
+
+    public async getCoursesInProgress(userId: string): Promise<any> {
+    const user = await User.findById(userId)
+        .populate({
+            path: 'coursesInProgress.courseId',
+            select: 'title image description difficulty category' // Campos que queremos do curso
+        })
+        .lean();
+
+    if (!user) {
+        throw new AppError('Usuário não encontrado.', 404);
+    }
+    
+    // Mapeia para o formato da resposta da API
+    const courses = user.coursesInProgress?.map((progressInfo: any) => ({
+        id: progressInfo.courseId._id.toString(),
+        title: progressInfo.courseId.title,
+        image: progressInfo.courseId.image,
+        progress: progressInfo.progress,
+        description: progressInfo.courseId.description,
+        difficulty: progressInfo.courseId.difficulty,
+        category: progressInfo.courseId.category,
+        rating: 4.8, // Estes são dados estáticos no seu exemplo, podemos ajustar
+        participants: 157
+    })) || [];
+    
+    // Retorna apenas os 8 primeiros, como na sua documentação
+    return courses.slice(0, 8);
+}
 }

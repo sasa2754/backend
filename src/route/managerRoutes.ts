@@ -19,4 +19,11 @@ managerRouter.get('/dashboard', managerOnly, managerController.getDashboard);
 // Rota para o sumário da equipe
 managerRouter.get('/employeesSummary', managerOnly, managerController.getEmployeesSummary);
 
+// Rota para o dashboard do funcionário específico
+managerRouter.get('/employee/:id/dashboard', managerOnly, managerController.getEmployeeDashboard);
+
+managerRouter.get('/team', managerOnly, managerController.getTeam);
+
+managerRouter.get('/courses-status', managerOnly, managerController.getEmployeeCourseStatus);
+
 export default managerRouter;

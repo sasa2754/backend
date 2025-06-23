@@ -3,6 +3,7 @@ import Course from '../model/courseModel.ts';
 import { AppError } from '../error/AppError.ts';
 import { NotificationService } from './notificationService.ts';
 import { ICompletedContent, IUser } from '../interface/userInterface.ts';
+import mongoose from 'mongoose';
 
 export class ManagerService {
 
@@ -14,10 +15,8 @@ export class ManagerService {
         data: { employeeId: string, courseId: string }
     ): Promise<{ message: string }> {
 
-        // AQUI ESTÁ A CORREÇÃO: Usamos .lean() para a operação de leitura do curso.
         const course = await Course.findById(data.courseId).lean();
 
-        // Para o funcionário, NÃO usamos .lean() porque vamos modificá-lo e salvá-lo.
         const employee: IUser | null = await User.findById(data.employeeId);
 
         if (!course) {
@@ -55,40 +54,73 @@ export class ManagerService {
     }
 
     public async getDashboardData(managerId: string): Promise<any> {
-        // 1. Encontrar todos os funcionários gerenciados por este manager
-        const team = await User.find({ manager: managerId }).lean();
-        const manager = await User.findById(managerId).lean(); // Pega os dados do próprio manager
+        const managerObjectId = new mongoose.Types.ObjectId(managerId);
 
-        if (!manager) {
-            throw new AppError("Manager não encontrado.", 404);
-        }
-
-        // 2. Calcular as métricas simples
-        const totalEmployees = team.length;
+        // 1. Contagens Simples
+        const totalEmployees = await User.countDocuments({ manager: managerObjectId });
         const totalCoursesOnPlatform = await Course.countDocuments({ isActive: true });
+        const manager = await User.findById(managerId).lean();
+        if (!manager) throw new AppError("Manager não encontrado.", 404);
 
-        // 3. Calcular as métricas agregadas (inscrições e taxa de conclusão)
-        let totalEnrollments = 0;
-        let sumOfProgress = 0;
-
-        team.forEach(employee => {
-            const ongoing = employee.coursesInProgress || [];
-            const completed = employee.completedCoursesList || [];
+        // 2. O Pipeline de Agregação para calcular as métricas complexas
+        const aggregationResult = await User.aggregate([
+            // Estágio 1: Encontrar apenas os funcionários da equipe deste manager
+            { $match: { manager: managerObjectId } },
             
-            totalEnrollments += ongoing.length + completed.length;
+            // Estágio 2: "Desdobrar" o array de cursos em progresso para processar um por um
+            { $unwind: '$coursesInProgress' },
             
-            // Soma o progresso dos cursos em andamento
-            if (ongoing.length > 0) {
-                sumOfProgress += ongoing.reduce((sum, course) => sum + course.progress, 0);
+            // Estágio 3: Fazer um "join" com a coleção de Cursos para pegar a categoria
+            {
+                $lookup: {
+                    from: 'courses', // O nome da coleção de cursos no MongoDB (geralmente em minúsculo e no plural)
+                    localField: 'coursesInProgress.courseId',
+                    foreignField: '_id',
+                    as: 'courseDetails'
+                }
+            },
+            
+            // Estágio 4: "Desdobrar" o resultado do lookup
+            { $unwind: '$courseDetails' },
+            
+            // Estágio 5: Agrupar tudo para fazer os cálculos
+            {
+                $group: {
+                    _id: null, // Agrupar todos os resultados em um único documento
+                    totalEnrollmentsInProgress: { $sum: 1 }, // Conta cada curso em progresso
+                    totalCompletionProgress: { $sum: '$coursesInProgress.progress' }, // Soma todas as porcentagens de progresso
+                    performanceByCategory: {
+                        $push: { // Cria um array com categoria e média de nota do curso
+                            category: '$courseDetails.category',
+                            score: { $avg: '$coursesInProgress.completedContent.score' }
+                        }
+                    }
+                }
             }
-            // Soma 100% para cada curso completo
-            sumOfProgress += completed.length * 100;
-        });
+        ]);
         
-        const completionRate = totalEnrollments > 0 ? Math.round(sumOfProgress / totalEnrollments) : 0;
+        // Contando cursos concluídos separadamente, pois a agregação fica mais simples assim
+        const completedCoursesResult = await User.aggregate([
+            { $match: { manager: managerObjectId } },
+            { $unwind: '$completedCoursesList' },
+            { $group: { _id: null, total: { $sum: 1 } } }
+        ]);
 
-        // 4. Montar a resposta final no formato da sua documentação
-        const response = {
+        const totalCompleted = completedCoursesResult[0]?.total || 0;
+        const aggregationData = aggregationResult[0] || {};
+        
+        const totalInProgress = aggregationData.totalEnrollmentsInProgress || 0;
+        const totalEnrollments = totalInProgress + totalCompleted;
+        
+        // Soma o progresso dos cursos em andamento (ex: 50% + 70%) + o progresso dos concluídos (100% cada)
+        const sumOfProgress = (aggregationData.totalCompletionProgress || 0) + (totalCompleted * 100);
+        const completionRate = totalEnrollments > 0 ? Math.round(sumOfProgress / totalEnrollments) : 0;
+        
+        // Simplificação do performanceByCategory (a lógica completa pode ser mais complexa)
+        // Aqui apenas pegamos os dados crus da agregação.
+        const performanceByCategory = aggregationData.performanceByCategory || [];
+
+        return {
             username: manager.name,
             isManager: true,
             isAdmin: false,
@@ -96,12 +128,13 @@ export class ManagerService {
             totalCourses: totalCoursesOnPlatform,
             totalRegistrations: totalEnrollments,
             completionRate: completionRate,
-            // Os campos abaixo requerem agregações mais complexas (próximo passo)
-            performanceByCategory: [], 
-            courseStatus: {}
+            performanceByCategory: performanceByCategory, // Dados brutos da agregação
+            courseStatus: {
+              completed: totalCompleted,
+              inProgress: totalInProgress,
+              notStarted: totalEnrollments - (totalInProgress + totalCompleted) // Este cálculo pode precisar de refinamento
+            }
         };
-
-        return response;
     }
 
     public async getEmployeesSummary(managerId: string): Promise<any[]> {
@@ -148,5 +181,140 @@ export class ManagerService {
         );
 
         return summaryData;
+    }
+
+    public async getEmployeeDashboard(managerId: string, employeeId: string): Promise<any> {
+        // 1. Busca o funcionário e popula os dados dos cursos referenciados
+        const employee = await User.findById(employeeId)
+            .populate({
+                path: 'coursesInProgress.courseId',
+                select: 'title category difficulty' // Popula os cursos em progresso
+            })
+            .populate({
+                path: 'completedCoursesList.courseId',
+                select: 'title category difficulty' // Popula os cursos concluídos
+            })
+            .lean();
+
+        // 2. VALIDAÇÃO DE SEGURANÇA: Garante que o funcionário pertence à equipe do manager.
+        if (!employee || employee.manager?.toString() !== managerId) {
+            throw new AppError('Funcionário não encontrado ou não pertence à sua equipe.', 404);
+        }
+
+        // 3. Calcular Média Geral (reaproveitando a lógica)
+        let totalScore = 0;
+        let scoredActivities = 0;
+        employee.coursesInProgress?.forEach(course => {
+            course.completedContent?.forEach(content => {
+                if (typeof content.score === 'number') {
+                    totalScore += content.score;
+                    scoredActivities++;
+                }
+            });
+        });
+        const averageScore = scoredActivities > 0 ? Math.round(totalScore / scoredActivities) : 0;
+        
+        // 4. Calcular o Nível de Competência por Categoria (a nova lógica complexa)
+        const categoriesData: { [key: string]: { totalScore: number, totalWeight: number } } = {};
+
+        const allUserCourses = [
+            ...(employee.coursesInProgress || []),
+            ...(employee.completedCoursesList || [])
+        ];
+        
+        allUserCourses.forEach((courseProgress: any) => {
+            if (!courseProgress.courseId) return; // Segurança caso um curso seja deletado
+
+            const category = courseProgress.courseId.category;
+            const difficulty = courseProgress.courseId.difficulty; // Peso do curso
+
+            if (!categoriesData[category]) {
+                categoriesData[category] = { totalScore: 0, totalWeight: 0 };
+            }
+            
+            // Para cursos concluídos, a nota é 100. Para os em progresso, pegamos a média das atividades.
+            let averageCourseScore = 100; // Default para cursos completos
+            if(courseProgress.completedContent) { // se for um curso em progresso
+                let courseTotalScore = 0;
+                let courseScoredActivities = 0;
+                courseProgress.completedContent.forEach((content: any) => {
+                    if (typeof content.score === 'number') {
+                        courseTotalScore += content.score;
+                        courseScoredActivities++;
+                    }
+                });
+                if(courseScoredActivities > 0) {
+                    averageCourseScore = courseTotalScore / courseScoredActivities;
+                } else {
+                    averageCourseScore = 0; // Se não tem atividades com nota, a média é 0.
+                }
+            }
+
+            categoriesData[category].totalScore += averageCourseScore * difficulty;
+            categoriesData[category].totalWeight += difficulty;
+        });
+
+        const competencies = Object.keys(categoriesData).map(category => ({
+            category: category,
+            competenceLevel: Math.round(categoriesData[category].totalScore / categoriesData[category].totalWeight)
+        }));
+
+        // 5. Montar a resposta final
+        return {
+            employeeId: employee.employeeId,
+            name: employee.name,
+            email: employee.email,
+            competencies: competencies,
+            courses: {
+                completed: employee.completedCoursesList?.map((c: any) => ({...c.courseId, score: 100})) || [], // Simplificado
+                inProgress: employee.coursesInProgress?.map((c: any) => ({...c.courseId, progress: c.progress})) || [], // Simplificado
+                notStarted: [] // Lógica mais complexa, podemos deixar para depois
+            },
+            averageScore: averageScore,
+            totalCourses: allUserCourses.length,
+            coursesCompleted: employee.completedCoursesList?.length || 0
+        };
+    }
+
+    public async getTeam(managerId: string): Promise<any> {
+        const team = await User.find({ manager: managerId }, 'name email').lean();
+
+        return team.map(member => ({
+            id: member._id.toString(),
+            name: member.name,
+            email: member.email
+        }));
+    }
+
+    public async getEmployeeCourseStatus(managerId: string, employeeId: string): Promise<any> {
+        const employee = await User.findById(employeeId).lean();
+
+        // Validação de segurança
+        if (!employee || employee.manager?.toString() !== managerId) {
+            throw new AppError('Funcionário não encontrado ou não pertence à sua equipe.', 404);
+        }
+
+        const allCourses = await Course.find({ isActive: true }, 'title').lean();
+
+        // Cria mapas para busca rápida
+        const inProgressMap = new Map(employee.coursesInProgress?.map((c: any) => [c.courseId.toString(), c]));
+        const completedSet = new Set(employee.completedCoursesList?.map((c: any) => c.courseId.toString()));
+
+        const statusList = allCourses.map(course => {
+            const courseIdStr = course._id.toString();
+            let status = 3; // 3 = Não iniciado (padrão)
+            if (completedSet.has(courseIdStr)) {
+                status = 1; // 1 = Completo
+            } else if (inProgressMap.has(courseIdStr)) {
+                status = 2; // 2 = Em progresso
+            }
+            return {
+                courseId: courseIdStr,
+                title: course.title,
+                status: status
+            };
+        });
+
+        return statusList;
     }
 }

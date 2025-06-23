@@ -32,6 +32,7 @@ const ModuleContentSchema: Schema = new Schema({
     
     // Campo para o tipo 1 (Aula escrita)
     content: { type: [WrittenContentBlockSchema], required: false },
+    deadline: { type: Date, required: false },
     
     // Campo para o tipo 2 (Vídeo) - Simplificado, o 'content' anterior pode ser usado
 

@@ -335,4 +335,47 @@ export class CourseService {
             newProgress: courseProgress.progress
         };
     }
+
+    public async getExamForCourse(userId: string, courseId: string): Promise<any> {
+        // 1. Validações iniciais
+        const user = await userModel.findById(userId).lean();
+        if (!user) throw new AppError('Usuário não encontrado.', 404);
+
+        const course = await Course.findById(courseId).lean();
+        if (!course) throw new AppError('Curso não encontrado.', 404);
+
+        // 2. Validação de segurança: O usuário está inscrito neste curso?
+        const isEnrolled = user.coursesInProgress?.some(p => p.courseId.toString() === courseId) || 
+                           user.completedCoursesList?.some(c => c.courseId.toString() === courseId);
+        if (!isEnrolled) {
+            throw new AppError('Você não tem permissão para acessar esta prova, pois não está inscrito no curso.', 403);
+        }
+
+        // 3. Validação de negócio: O curso realmente tem uma prova e ela já foi criada?
+        if (!course.haveExam || !course.exam) {
+            throw new AppError('Este curso não possui uma prova final disponível.', 404);
+        }
+
+        // 4. Buscar os dados da prova
+        const exam = await Exam.findById(course.exam).lean();
+        if (!exam) {
+            throw new AppError('Prova não encontrada.', 404);
+        }
+
+        // 5. Formatar a resposta, REMOVENDO as respostas corretas
+        const questionsForFrontend = exam.questions.map((q: any) => {
+            // Criamos um novo objeto sem o campo 'correctOptionId'
+            const { correctOptionId, ...questionData } = q;
+            return questionData;
+        });
+
+        // 6. Montar o objeto de resposta final
+        return {
+            id: exam._id.toString(),
+            title: exam.title,
+            courseId: course._id.toString(),
+            completed: false, // O frontend pode usar a lista de progresso do usuário para verificar isso
+            content: questionsForFrontend // 'content' como na sua documentação
+        };
+    }
 }
