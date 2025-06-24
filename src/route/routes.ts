@@ -19,20 +19,20 @@ import testRouter from "./testRoutes.ts";
 export default function (app: Express) {
     app.use(express.json());
 
-    app.use("/auth", authRouter);
-    app.use("/user", userRouter);
-    app.use("/admin/companies", companyRouter);
-    app.use("/admin/courses", courseRouter);
-    app.use("/courses", generalCourseRouter);
-    app.use("/manager", managerRouter);
-    app.use("/notification", notificationRouter);
-    app.use("/home", homeRouter);
-    app.use("/activities", activityRouter);
-    app.use("/profile", profileRouter);
-    app.use("/api", generalApiRouter);
-    app.use("/calendar", calendarRouter);
-    app.use("/certificate", certificateRouter);
-    app.use("/test", testRouter);
+    app.use("/api/auth", authRouter);
+    app.use("/api/user", userRouter);
+    app.use("/api/admin/companies", companyRouter);
+    app.use("/api/admin/courses", courseRouter);
+    app.use("/api/courses", generalCourseRouter);
+    app.use("/api/manager", managerRouter);
+    app.use("/api/notification", notificationRouter);
+    app.use("/api/home", homeRouter);
+    app.use("/api/activities", activityRouter);
+    app.use("/api/profile", profileRouter);
+    app.use("/api/", generalApiRouter);
+    app.use("/api/calendar", calendarRouter);
+    app.use("/api/certificate", certificateRouter);
+    app.use("/api/test", testRouter);
 
     app.use(async (err: Error, req: Request, res: Response, next: NextFunction) => {
         let status = 500;

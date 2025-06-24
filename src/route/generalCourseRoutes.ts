@@ -22,6 +22,6 @@ generalCourseRouter.get('/:courseId/lessons/:lessonId', authMiddleware, courseCo
 generalCourseRouter.post('/:courseId/lessons/:lessonId/complete', authMiddleware, courseController.markLessonAsComplete);
 
 // Rota para submeter as respostas de um quiz
-generalCourseRouter.post('/:courseId/lessons/:lessonId/submit-quiz', authMiddleware, courseController.submitQuiz);
+generalCourseRouter.post('/:courseId/lessons/:lessonId/submit', authMiddleware, courseController.submitQuiz);
 
 export default generalCourseRouter;

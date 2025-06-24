@@ -1,225 +1,182 @@
-===================================================
-    DOCUMENTAÇÃO DE ENDPOINTS - PROJETO IDUCA
-===================================================
+🚀 Projeto Iduca - Documentação da API
+Bem-vindo(a) à documentação oficial da API da plataforma de cursos Iduca! Este guia detalha todos os endpoints disponíveis, seus parâmetros, e exemplos de uso para facilitar a integração e os testes.
 
-Este documento resume os principais fluxos de uso e todos os endpoints da API.
+✨ Como Usar
+URL Base: Todas as rotas são prefixadas com /api. Ex: http://localhost:8080/api/...
 
----------------------------------
- FLUXOS DE USO COMUNS
----------------------------------
+Autenticação: A maioria dos endpoints requer um token de autenticação. Ele deve ser enviado no cabeçalho (Header) da requisição da seguinte forma:
+Authorization: Bearer <SEU_TOKEN_JWT_AQUI>
 
----
-FLUXO 1: Admin cadastra uma Nova Empresa e seu primeiro Gestor
----
-1.  ADMIN FAZ LOGIN: `POST /auth/login` com credenciais de admin. Pega o TOKEN_ADMIN.
-2.  ADMIN CRIA UMA EMPRESA: `POST /admin/companies` usando o TOKEN_ADMIN. Pega o COMPANY_ID da resposta.
-3.  ADMIN CRIA UM USUÁRIO (GESTOR): `POST /users` usando o TOKEN_ADMIN. No corpo, envia os dados do gestor e o `companyId` da empresa criada. O gestor recebe um e-mail com senha temporária.
+Formato de Dados: Todas as requisições e respostas que contém dados utilizam o formato JSON.
 
----
-FLUXO 2: Novo Gestor faz o primeiro login e gerencia sua equipe
----
-1.  GESTOR FAZ LOGIN COM SENHA TEMPORÁRIA: `POST /auth/login` com e-mail e senha temporária. Pega o TOKEN_PRIMEIRO_ACESSO.
-2.  GESTOR DEFINE SUA SENHA DEFINITIVA: `POST /auth/set-initial-password` usando o TOKEN_PRIMEIRO_ACESSO.
-3.  GESTOR FAZ LOGIN NOVAMENTE: `POST /auth/login` com a nova senha. Pega o TOKEN_GESTOR_NORMAL.
-4.  GESTOR CRIA UM FUNCIONÁRIO: `POST /users` usando o TOKEN_GESTOR_NORMAL. O funcionário é criado na mesma empresa do gestor.
-5.  GESTOR INSCREVE FUNCIONÁRIO EM UM CURSO: `POST /manager/enroll` usando o TOKEN_GESTOR_NORMAL. No corpo, envia o `employeeId` e o `courseId`.
+🌟 Fluxos de Uso Comuns
+(Os fluxos que você descreveu estão perfeitos e continuam válidos!)
 
----
-FLUXO 3: Aluno realiza uma aula e um quiz
----
-1.  ALUNO FAZ LOGIN: `POST /auth/login`. Pega o TOKEN_ALUNO.
-2.  ALUNO LISTA OS CURSOS: `GET /courses` usando o TOKEN_ALUNO para ver os cursos disponíveis.
-3.  ALUNO VÊ DETALHES DE UM CURSO: `GET /courses/:courseId` para ver os módulos e aulas. Pega o `lessonId` de uma aula e o `quizId` de uma atividade.
-4.  ALUNO COMPLETA UMA AULA SIMPLES: `POST /courses/:courseId/lessons/:lessonId/complete` para marcar a aula como concluída e atualizar o progresso.
-5.  ALUNO FAZ UM QUIZ: `POST /courses/:courseId/lessons/:quizId/submit` enviando as respostas no corpo da requisição. Recebe a nota e o progresso atualizado.
-6.  ALUNO VÊ NOTIFICAÇÃO: `GET /notifications` para ver a notificação da inscrição feita pelo gestor.
+📚 Referência Completa de Endpoints
+🔐 Auth - Autenticação (/api/auth)
+POST /api/auth/login
 
+Realiza o login de qualquer tipo de usuário.
 
-===================================================
-    REFERÊNCIA COMPLETA DE ENDPOINTS
-===================================================
+POST /api/auth/set-initial-password
 
----------------------------------
- AUTH - Autenticação (/auth)
----------------------------------
+Usado por um usuário logado para definir sua senha definitiva após o primeiro acesso.
 
-Endpoint: POST /auth/login
-Descrição: Realiza o login de qualquer tipo de usuário.
-... (todos os outros endpoints de auth permanecem os mesmos) ...
+(...e todos os outros endpoints de forgotPass, checkCode, resetPassword)
 
-Endpoint: POST /auth/set-initial-password
-Descrição: Usado por um usuário logado (com `firstAccess: true`) para definir sua senha definitiva.
-Autorização: Bearer Token do primeiro acesso.
-Corpo (Request Body): { "currentPassword": "senha_temporaria", "newPassword": "nova_senha" }
-Resposta de Sucesso (200 OK): { "message": "Senha definida com sucesso." }
+🏠 Home - Tela Inicial (/api/home)
+GET /api/home/progress
 
-----------------------------------------
- ADMIN - Empresas (/admin/companies)
-----------------------------------------
+Retorna o progresso geral e estatísticas para a tela inicial do usuário logado (Aluno, Manager ou Admin).
 
-Endpoint: POST /admin/companies
-Descrição: Cria uma nova empresa cliente no sistema.
-Autorização: Bearer Token (role: "admin").
-Corpo (Request Body): { "name": "Nome da Nova Empresa" }
-Resposta de Sucesso (201 Created): { "message": "Company created successfully", "companyId": "6674c1a2b3d4e5f6g7h8i9j0" }
+Autorização: Bearer Token (qualquer role).
 
----
+Resposta de Sucesso (200 OK): (O corpo da resposta varia de acordo com a role do usuário, como implementamos).
 
-Endpoint: GET /admin/companies
-Descrição: Lista todas as empresas cadastradas.
-Autorização: Bearer Token (role: "admin").
-Resposta de Sucesso (200 OK): { "companies": [{ "id": "...", "name": "..." }] }
+GET /api/home/coursesInProgress
 
----
+Retorna até 8 cursos que o usuário está fazendo atualmente.
 
-Endpoint: DELETE /admin/companies/:companyId
-Descrição: Deleta uma empresa e TODOS os funcionários associados a ela.
-Autorização: Bearer Token (role: "admin").
+Autorização: Bearer Token (qualquer role).
 
--------------------------------------
- ADMIN - Cursos (/admin/courses)
--------------------------------------
+Resposta de Sucesso (200 OK): (Array de objetos de curso em progresso).
 
-Endpoint: POST /admin/courses
-Descrição: Cria um novo curso com módulos e conteúdos.
-Autorização: Bearer Token (role: "admin").
-Corpo (Request Body): (JSON complexo com a estrutura do curso)
-Resposta de Sucesso (201 Created): (Objeto do curso criado)
+📘 Courses - Cursos (Acesso Geral /api/courses)
+GET /api/courses
 
----
+Retorna a lista paginada de cursos, com suporte a filtros.
 
-Endpoint: POST /admin/courses/:courseId/exam
-Descrição: Cadastra a prova final para um curso existente.
-Autorização: Bearer Token (role: "admin").
-Corpo (Request Body): { "title": "Prova Final", "questions": [...] }
-Resposta de Sucesso (201 Created): (Objeto da prova criada)
+Autorização: Bearer Token (qualquer role).
 
----
+Query Params: page, search, category, difficulty.
 
-Endpoint: DELETE /admin/courses/:courseId
-Descrição: Deleta um curso e sua prova associada.
-Autorização: Bearer Token (role: "admin").
-Resposta de Sucesso (200 OK): { "message": "Course deleted successfully" }
+GET /api/courses/:id
 
----------------------------------
- USERS - Usuários (/users)
----------------------------------
+Retorna os detalhes de um curso específico, incluindo módulos e progresso do usuário.
 
-Endpoint: POST /users
-Descrição: Cria um novo usuário. O comportamento muda baseado na role do criador.
-Autorização: Bearer Token (role: "admin" ou "manager").
-... (descrição dos cenários de admin e manager) ...
+Autorização: Bearer Token (qualquer role).
 
------------------------------------------
- MANAGER - Gestão de Equipe (/manager)
------------------------------------------
+GET /api/courses/:courseId/lessons/:lessonId
 
-Endpoint: POST /manager/enroll
-Descrição: Inscreve um funcionário da sua equipe em um curso.
+Retorna o conteúdo completo de uma aula ou atividade específica.
+
+Autorização: Bearer Token (qualquer role).
+
+POST /api/courses/:courseId/lessons/:lessonId/complete
+
+Marca uma aula/vídeo como concluído pelo usuário e atualiza o progresso.
+
+Autorização: Bearer Token (qualquer role).
+
+POST /api/courses/:courseId/lessons/:lessonId/submit
+
+Envia as respostas de um quiz para correção e atualiza o progresso.
+
+Autorização: Bearer Token (qualquer role).
+
+📝 Activities - Atividades (/api/activities)
+POST /api/activities/:courseId/lessons/:lessonId/upload
+
+Envia um arquivo PDF como resposta para uma atividade de upload.
+
+Autorização: Bearer Token (qualquer role).
+
+Corpo: form-data com uma chave pdfFile contendo o arquivo.
+
+🗓️ Calendar - Calendário (/api/calendar)
+POST /api/calendar/reminder
+
+Permite ao usuário adicionar um lembrete pessoal.
+
+Autorização: Bearer Token (qualquer role).
+
+Corpo (Request Body): { "title": "Estudar para a prova", "date": "2025-05-18" }
+
+GET /api/calendar
+
+Retorna todos os eventos do usuário (lembretes + prazos) em uma janela de 1 ano.
+
+Autorização: Bearer Token (qualquer role).
+
+GET /api/calendar/next
+
+Retorna os eventos dos próximos 7 dias.
+
+Autorização: Bearer Token (qualquer role).
+
+👤 Profile - Perfil do Usuário (/api/profile)
+GET /api/profile
+
+Retorna todas as informações do perfil do usuário logado.
+
+Autorização: Bearer Token (qualquer role).
+
+PUT /api/profile
+
+Permite que o usuário edite sua foto e/ou interesses.
+
+Autorização: Bearer Token (qualquer role).
+
+Corpo: form-data com os campos photoUser (tipo File) e/ou interests (array de strings).
+
+🎓 Certificate - Certificados (/api/certificate)
+GET /api/certificate/:id/pdf
+
+Retorna o PDF do certificado de um curso finalizado.
+
+Autorização: Bearer Token (qualquer role).
+
+Parâmetros de URL: :id = ID do curso concluído.
+
+🧑‍💼 Manager - Gestão de Equipe (/api/manager)
+GET /api/manager/dashboard
+
+Retorna os dados agregados da equipe para o dashboard principal do manager.
+
 Autorização: Bearer Token (role: "manager").
-Corpo (Request Body): { "employeeId": "ID_DO_FUNCIONARIO", "courseId": "ID_DO_CURSO" }
-Resposta de Sucesso (200 OK): { "message": "Funcionário inscrito com sucesso!" }
 
----
+GET /api/manager/employeesSummary
 
-Endpoint: GET /manager/employeesSummary
-Descrição: Retorna um resumo de desempenho de todos os funcionários da equipe do manager.
+Retorna um resumo de desempenho de todos os funcionários da equipe do manager.
+
 Autorização: Bearer Token (role: "manager").
-Resposta de Sucesso (200 OK):
-[
-  {
-    "id": "...",
-    "name": "Ana Costa",
-    "email": "ana@empresa.com",
-    "coursesCompleted": 4,
-    "coursesInProgress": 2,
-    "averageScore": 87,
-    "topCategory": "A definir",
-    "isManager": false
-  }
-]
 
----
+GET /api/manager/team
 
-Endpoint: GET /manager/dashboard
-Descrição: Retorna os dados agregados da equipe para o dashboard principal do manager.
+Retorna a lista simples de colaboradores (id, nome, email) do time do manager.
+
 Autorização: Bearer Token (role: "manager").
-Resposta de Sucesso (200 OK):
-{
-  "username": "Nome do Manager",
-  "isManager": true,
-  "isAdmin": false,
-  "totalEmployees": 12,
-  "totalCourses": 25,
-  "totalRegistrations": 47,
-  "completionRate": 73
-}
 
----------------------------------------
- COURSES - Cursos (Acesso Geral /courses)
----------------------------------------
+GET /api/manager/courses-status?employeeId={id}
 
-Endpoint: GET /courses
-Descrição: Retorna a lista paginada de cursos, com suporte a filtros.
-Autorização: Bearer Token (qualquer role).
-Query Params: `page`, `search`, `category`, `difficulty`.
-Resposta de Sucesso (200 OK):
-{
-  "currentPage": 1,
-  "totalPages": 3,
-  "courses": [ ... ]
-}
+Retorna a lista de todos os cursos da plataforma com o status de inscrição de um colaborador específico.
 
----
+Autorização: Bearer Token (role: "manager").
 
-Endpoint: GET /courses/:id
-Descrição: Retorna os detalhes de um curso específico, incluindo módulos e progresso do usuário.
-Autorização: Bearer Token (qualquer role).
+GET /api/manager/employee/:id/dashboard
 
----
+Retorna um dashboard com todas as informações detalhadas de um colaborador específico.
 
-Endpoint: GET /courses/:courseId/lessons/:lessonId
-Descrição: Retorna o conteúdo completo de uma aula ou atividade específica.
-Autorização: Bearer Token (qualquer role).
+Autorização: Bearer Token (role: "manager").
 
----
+POST /api/manager/enroll
 
-Endpoint: POST /courses/:courseId/lessons/:lessonId/complete
-Descrição: Marca uma aula/vídeo como concluído pelo usuário e atualiza o progresso.
-Autorização: Bearer Token (qualquer role).
-Corpo: Nenhum.
-Resposta de Sucesso (200 OK): { "message": "...", "newProgress": 50 }
+Inscreve um funcionário da sua equipe em um curso.
 
----
+Autorização: Bearer Token (role: "manager").
 
-Endpoint: POST /courses/:courseId/lessons/:lessonId/submit
-Descrição: Envia as respostas de um quiz para correção e atualiza o progresso.
-Autorização: Bearer Token (qualquer role).
-Corpo (Request Body): { "answers": [{ "questionId": 1, "selectedOptionId": "b" }] }
-Resposta de Sucesso (200 OK): { "message": "...", "score": 100, "newProgress": 75, ... }
+🏢 Admin - Gestão do Sistema (/api/admin/...)
+(Todos os endpoints de /api/admin/companies e /api/admin/courses que já listamos antes entram aqui)
 
----------------------------------------------
- ACTIVITIES - Atividades (/activities)
----------------------------------------------
+🌐 Geral (/api/...)
+GET /api/categories
 
-Endpoint: POST /activities/:courseId/lessons/:lessonId/upload
-Descrição: Envia um arquivo PDF como resposta para uma atividade de upload.
-Autorização: Bearer Token (qualquer role).
-Corpo: `form-data` com uma chave `pdfFile` contendo o arquivo.
-Resposta de Sucesso (200 OK): { "message": "Atividade enviada com sucesso!", "filePath": "caminho/do/arquivo" }
+Retorna a lista de categorias de curso disponíveis.
 
-------------------------------------------------
- NOTIFICATIONS - Notificações (/notifications)
-------------------------------------------------
+Autorização: Nenhuma ou Bearer Token (qualquer role).
 
-Endpoint: GET /notifications
-Descrição: Busca as notificações mais recentes para o usuário logado.
-Autorização: Bearer Token (qualquer role).
-Resposta de Sucesso (200 OK): (Array de objetos de notificação)
+GET /api/interests
 
----
+Retorna a lista de interesses disponíveis para o perfil.
 
-Endpoint: PATCH /notifications/:notificationId/read
-Descrição: Marca uma notificação específica como lida.
-Autorização: Bearer Token (qualquer role).
-Resposta de Sucesso (200 OK): (Objeto da notificação atualizado com `isRead: true`)
+Autorização: Nenhuma ou Bearer Token (qualquer role).

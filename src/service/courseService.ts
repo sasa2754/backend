@@ -90,13 +90,9 @@ export class CourseService {
             .lean();
 
         const user = await userModel.findById(userId).select('coursesInProgress').lean();
-        const progressMap = new Map();
-        if (user && user.coursesInProgress) {
-            user.coursesInProgress.forEach((course: any) => {
-
-                progressMap.set(course.id.toString(), course.progress);
-            });
-        }
+        const progressMap = new Map(
+            user?.coursesInProgress?.map((p: any) => [p.courseId.toString(), p.progress]) || []
+        );
 
         const coursesWithProgress = courses.map(course => ({
             id: course._id.toString(),
