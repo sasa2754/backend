@@ -34,7 +34,8 @@ const UserSchema: Schema = new Schema({
       _id: false,
       courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
       completionDate: { type: Date, default: Date.now },
-      certificateAvailable: { type: Boolean, default: true }
+      certificateAvailable: { type: Boolean, default: true },
+      finalScore: { type: Number, required: false }
   }],
   ongoingCourses: { type: Number, default: 0 },
   totalCourses: { type: Number, default: 0 },

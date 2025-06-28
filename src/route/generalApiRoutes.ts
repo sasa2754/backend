@@ -9,7 +9,9 @@ const CATEGORIES = [
   { id: 4, name: "Gestão" },
   { id: 5, name: "Banco de Dados" },
   { id: 6, name: "Inteligência Artificial" },
-  { id: 7, name: "Mecânica" }
+  { id: 7, name: "Mecânica" },
+  { id: 8, name: "Backend" },
+  { id: 9, name: "Frontend" },
 ];
 
 const INTERESTS = [
@@ -19,7 +21,9 @@ const INTERESTS = [
     { id: 4, name: "Gestão" },
     { id: 5, name: "Banco de Dados" },
     { id: 6, name: "Inteligência Artificial" },
-    { id: 7, name: "Mecânica" }
+    { id: 7, name: "Mecânica" },
+    { id: 8, name: "Backend" },
+    { id: 9, name: "Frontend" },
 ];
 
 // Rota para retornar as categorias de curso

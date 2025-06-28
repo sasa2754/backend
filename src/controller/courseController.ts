@@ -13,6 +13,14 @@ interface AuthRequest extends Request {
 export class CourseController {
     constructor(private courseService: CourseService) {}
 
+    private handleError(error: unknown, res: Response, context: string) {
+        if (error instanceof AppError) {
+            return res.json({ message: error.message });
+        }
+        console.error(`ERRO INESPERADO EM ${context}:`, error);
+        return res.status(500).json({ message: 'Erro interno no servidor.' });
+    }
+
     // Lógica para criar um curso
     public createCourse = async (req: Request, res: Response) => {
         try {
@@ -117,17 +125,12 @@ export class CourseController {
     public markLessonAsComplete = async (req: AuthRequest, res: Response) => {
         try {
             const userId = req.user?.sub;
-            if (!userId) {
-                throw new AppError('Usuário não autenticado.', 401);
-            }
-
+            if (!userId) throw new AppError('Usuário não autenticado.', 401);
             const { courseId, lessonId } = req.params;
-
             const result = await this.courseService.markLessonAsComplete(userId, courseId, lessonId);
             res.status(200).json(result);
         } catch (error) {
-            console.log("ERRO AO MARCAR A LIÇÃO COMO CONCLUÍDA:", error);
-            throw new AppError("Erro interno do servidor!", 500);
+            this.handleError(error, res, 'MARK_LESSON_COMPLETE');
         }
     };
 
@@ -135,30 +138,37 @@ export class CourseController {
         try {
             const userId = req.user?.sub;
             if (!userId) throw new AppError('Usuário não autenticado.', 401);
-
             const { courseId, lessonId } = req.params;
-
             const result = await this.courseService.submitQuiz(userId, courseId, lessonId, req.body);
             res.status(200).json(result);
         } catch (error) {
-            console.log("ERRO AO ENVIAR A ATIVIDADE:", error);
-            throw new AppError("Erro interno do servidor!", 500);
+            this.handleError(error, res, 'SUBMIT_QUIZ');
         }
     };
-
+    
     public getExam = async (req: AuthRequest, res: Response) => {
         try {
             const userId = req.user?.sub;
-            if (!userId) {
-                throw new AppError('Usuário não autenticado.', 401);
-            }
+            if (!userId) throw new AppError('Usuário não autenticado.', 401);
             const { id: courseId } = req.params;
-
             const result = await this.courseService.getExamForCourse(userId, courseId);
             res.status(200).json(result);
         } catch (error) {
-            console.log("ERRO AO ENVIAR A PROVA:", error);
-            throw new AppError("Erro interno do servidor!", 500);
+            this.handleError(error, res, 'GET_EXAM');
+        }
+    };
+
+     public submitExam = async (req: AuthRequest, res: Response) => {
+        try {
+            const userId = req.user?.sub;
+            if (!userId) throw new AppError('Usuário não autenticado.', 401);
+            
+            const { id: courseId } = req.params;
+
+            const result = await this.courseService.submitExam(userId, courseId, req.body);
+            res.status(200).json(result);
+        } catch (error) {
+            this.handleError(error, res, 'SUBMIT_EXAM');
         }
     };
 }

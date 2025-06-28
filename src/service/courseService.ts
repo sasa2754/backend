@@ -234,40 +234,52 @@ export class CourseService {
     }
 
     public async markLessonAsComplete(userId: string, courseId: string, lessonId: string) {
-        const course = await Course.findById(courseId).lean();
-        const user = await userModel.findById(userId);
-
+        const user = await userModel.findById(userId).lean();
         if (!user) throw new AppError('Usuário não encontrado.', 404);
-        if (!course) throw new AppError('Curso não encontrado.', 404);
 
         const courseProgress = user.coursesInProgress?.find(p => p.courseId.toString() === courseId);
-
-        if (!courseProgress) {
-            throw new AppError('Usuário não está inscrito neste curso.', 403);
-        }
-
-        const isAlreadyCompleted = courseProgress.completedContent.some(
-            c => c.contentId.toString() === lessonId
+        if (!courseProgress) throw new AppError('Usuário não está inscrito neste curso.', 403);
+        
+        const updateResult = await userModel.updateOne(
+            { 
+                _id: userId,
+                'coursesInProgress.courseId': new mongoose.Types.ObjectId(courseId)
+            },
+            {
+                $addToSet: {
+                    'coursesInProgress.$.completedContent': {
+                        contentId: new mongoose.Types.ObjectId(lessonId)
+                    }
+                }
+            }
         );
-
-        if (isAlreadyCompleted) {
-            return { message: "Aula já estava marcada como concluída.", newProgress: courseProgress.progress };
+        
+        if (updateResult.matchedCount === 0) {
+            throw new AppError('Não foi possível encontrar o curso em progresso para este usuário.', 404);
         }
 
-        courseProgress.completedContent.push({ contentId: new mongoose.Types.ObjectId(lessonId) });
+        const updatedUser = await userModel.findById(userId).lean();
+        const course = await Course.findById(courseId).lean();
+        
+        if(!updatedUser || !course) throw new AppError('Erro ao buscar dados para recalcular progresso.', 500);
 
+        const finalCourseProgress = updatedUser.coursesInProgress?.find(p => p.courseId.toString() === courseId);
         const totalContentItems = course.modules.reduce((sum, module) => sum + module.content.length, 0);
-        const completedCount = courseProgress.completedContent.length;
+        const completedCount = finalCourseProgress?.completedContent.length || 0;
 
+        let newProgress = 0;
         if (totalContentItems > 0) {
-            courseProgress.progress = Math.round((completedCount / totalContentItems) * 100);
+            newProgress = Math.round((completedCount / totalContentItems) * 100);
         }
-
-        await user.save();
+        
+        await userModel.updateOne(
+            { _id: userId, 'coursesInProgress.courseId': new mongoose.Types.ObjectId(courseId) },
+            { $set: { 'coursesInProgress.$.progress': newProgress } }
+        );
 
         return { 
             message: "Aula marcada como concluída com sucesso!", 
-            newProgress: courseProgress.progress 
+            newProgress: newProgress 
         };
     }
 
@@ -372,6 +384,52 @@ export class CourseService {
             courseId: course._id.toString(),
             completed: false, // O frontend pode usar a lista de progresso do usuário para verificar isso
             content: questionsForFrontend // 'content' como na sua documentação
+        };
+    }
+
+    public async submitExam(userId: string, courseId: string, submission: any) {
+        const user = await userModel.findById(userId);
+        if (!user) throw new AppError('Usuário não encontrado.', 404);
+
+        const course = await Course.findById(courseId).populate('exam').lean();
+        if (!course || !course.exam) throw new AppError('Prova não encontrada para este curso.', 404);
+        
+        // Lógica de correção (idêntica à do submitQuiz)
+        let correctCount = 0;
+        const exam: any = course.exam;
+        const totalQuestions = exam.questions.length;
+        const correctAnswersMap = new Map(exam.questions.map((q: any) => [q.id, q.correctOptionId]));
+
+        submission.answers.forEach((answer: any) => {
+            if (correctAnswersMap.get(answer.questionId) === answer.selectedOptionId) {
+                correctCount++;
+            }
+        });
+
+        const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+        
+        // A LÓGICA DE CONCLUSÃO DO CURSO!
+        // 1. Remover o curso do array 'coursesInProgress'
+        const updatedInProgress = user.coursesInProgress?.filter(
+            p => p.courseId.toString() !== courseId
+        );
+        user.coursesInProgress = updatedInProgress;
+        
+        // 2. Adicionar o curso ao array 'completedCoursesList' com a nota final
+        user.completedCoursesList?.push({
+            courseId: new mongoose.Types.ObjectId(courseId),
+            completionDate: new Date(),
+            certificateAvailable: true,
+            finalScore: score
+        });
+        
+        await user.save();
+        
+        return {
+            message: "Prova finalizada com sucesso!",
+            score: score,
+            correctAnswers: correctCount,
+            totalQuestions: totalQuestions,
         };
     }
 }

@@ -188,11 +188,11 @@ export class ManagerService {
         const employee = await User.findById(employeeId)
             .populate({
                 path: 'coursesInProgress.courseId',
-                select: 'title category difficulty' // Popula os cursos em progresso
+                select: 'title category difficulty image' // Popula os cursos em progresso
             })
             .populate({
                 path: 'completedCoursesList.courseId',
-                select: 'title category difficulty' // Popula os cursos concluídos
+                select: 'title category difficulty image' // Popula os cursos concluídos
             })
             .lean();
 
@@ -200,6 +200,16 @@ export class ManagerService {
         if (!employee || employee.manager?.toString() !== managerId) {
             throw new AppError('Funcionário não encontrado ou não pertence à sua equipe.', 404);
         }
+
+        const allPlatformCourses = await Course.find({ isActive: true }).lean();
+    
+        const completedIds = new Set(employee.completedCoursesList?.map((c: any) => c.courseId._id.toString()));
+        const inProgressIds = new Set(employee.coursesInProgress?.map((c: any) => c.courseId._id.toString()));
+
+        const notStarted = allPlatformCourses.filter(course => {
+            const courseIdStr = course._id.toString();
+            return !completedIds.has(courseIdStr) && !inProgressIds.has(courseIdStr);
+        });
 
         // 3. Calcular Média Geral (reaproveitando a lógica)
         let totalScore = 0;
@@ -266,9 +276,29 @@ export class ManagerService {
             email: employee.email,
             competencies: competencies,
             courses: {
-                completed: employee.completedCoursesList?.map((c: any) => ({...c.courseId, score: 100})) || [], // Simplificado
-                inProgress: employee.coursesInProgress?.map((c: any) => ({...c.courseId, progress: c.progress})) || [], // Simplificado
-                notStarted: [] // Lógica mais complexa, podemos deixar para depois
+                completed: employee.completedCoursesList?.map((c: any) => ({
+                    id: c.courseId._id.toString(),
+                    image: c.courseId.image, // Adicionando imagem para o card
+                    title: c.courseId.title,
+                    category: c.courseId.category,
+                    difficulty: c.courseId.difficulty,
+                    score: c.finalScore || 100 // Usar a nota final se existir
+                })) || [],
+                inProgress: employee.coursesInProgress?.map((c: any) => ({
+                    id: c.courseId._id.toString(),
+                    image: c.courseId.image, // Adicionando imagem para o card
+                    title: c.courseId.title,
+                    category: c.courseId.category,
+                    difficulty: c.courseId.difficulty,
+                    progress: c.progress
+                })) || [],
+                notStarted: notStarted.map(course => ({
+                    id: course._id.toString(),
+                    image: course.image, // Adicionando imagem para o card
+                    title: course.title,
+                    category: course.category,
+                    difficulty: course.difficulty
+                }))
             },
             averageScore: averageScore,
             totalCourses: allUserCourses.length,

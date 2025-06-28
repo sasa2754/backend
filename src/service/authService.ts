@@ -39,7 +39,7 @@ export class AuthService {
       throw new AppError('SECRET não definida nas variáveis de ambiente.', 500);
     }
 
-    const token = jwt.sign({ sub: user._id, email: user.email, role: user.role, company: user.company }, jwtSecret, { expiresIn: '8h' });
+    const token = jwt.sign({ sub: user._id, name: user.name, email: user.email, role: user.role, company: user.company }, jwtSecret, { expiresIn: '8h' });
 
     return {
       token,

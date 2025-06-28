@@ -2,16 +2,14 @@ import mongoose, { Document } from 'mongoose';
 
 export interface ICompletedCourse {
   courseId: mongoose.Types.ObjectId;
-  id: string;
-  title: string;
-  image: string;
   completionDate: Date;
   certificateAvailable: boolean;
+  finalScore?: number;
 }
 
 export interface ICalendarItem {
   date: Date;
-  type: 1 | 2 | 3; // lembrete, atividade, prova
+  type: 1 | 2 | 3;
   description: string;
 }
 
