@@ -14,6 +14,7 @@ export class UserController {
     constructor(private userService: UserService) {}
 
     public createUser = async (req: AuthRequest, res: Response) => {
+
         try {
             if (!req.user?.role) {
                 throw new AppError('Não foi possível identificar a permissão do usuário.', 403);
@@ -29,12 +30,11 @@ export class UserController {
 
         } catch (error) {
             if (error instanceof AppError) {
-                // VERSÃO CORRETA: com return, status e .message
-                return res.json({ message: error });
+                res.json({ message: error });
             }
             
             console.error("ERRO INESPERADO NO USER CONTROLLER:", error); 
-            return res.status(500).json({ message: 'Internal Server Error' });
+            res.status(500).json({ message: 'Internal Server Error' });
         }
     };
 }

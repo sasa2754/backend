@@ -39,6 +39,8 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
 
 export const checkRole = (roles: Array<'admin' | 'manager' | 'employee'>) => {
     return (req: AuthRequest, res: Response, next: NextFunction) => {
+            console.log("aaaaaa")
+
         if (!req.user || !roles.includes(req.user.role)) {
             throw new AppError('Acesso negado. Permissão insuficiente.', 403);
         }

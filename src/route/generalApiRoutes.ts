@@ -12,6 +12,8 @@ const CATEGORIES = [
   { id: 7, name: "Mecânica" },
   { id: 8, name: "Backend" },
   { id: 9, name: "Frontend" },
+  { id: 10, name: "Cibersegurança" },
+  { id: 11, name: "Saúde" },
 ];
 
 const INTERESTS = [
@@ -24,6 +26,8 @@ const INTERESTS = [
     { id: 7, name: "Mecânica" },
     { id: 8, name: "Backend" },
     { id: 9, name: "Frontend" },
+    { id: 10, name: "Cibersegurança" },
+    { id: 11, name: "Saúde" },
 ];
 
 // Rota para retornar as categorias de curso

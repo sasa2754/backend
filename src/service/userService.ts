@@ -25,7 +25,6 @@ export class UserService {
 
         let targetCompanyId: string | null = null;
         let role: 'manager' | 'employee';
-
         if (creatorRole === 'admin') {
             if (!data.companyId) {
                 throw new AppError('Admin deve especificar o companyId para criar um usuário.', 400);
@@ -36,7 +35,7 @@ export class UserService {
             }
             targetCompanyId = data.companyId;
             role = 'manager';
-        } else { // é manager
+        } else {
             if (!creatorCompanyId) {
                 throw new AppError('Manager não tem uma empresa associada.', 400);
             }
