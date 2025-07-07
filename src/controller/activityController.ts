@@ -30,10 +30,10 @@ export class ActivityController {
             // 3. Pega o arquivo que o middleware 'Multer' processou e anexou à requisição
             const file = req.file;
 
-            // 4. Chama o serviço com todas as informações
+            // // 4. Chama o serviço com todas as informações
             const result = await this.activityService.submitPdf(userId, courseId, lessonId, file);
             
-            res.status(200).json(result);
+            res.status(200).json("Atividade enviada com sucesso!");
         } catch (error) {
             if (error instanceof AppError) {
                 res.json({ message: error.message });
